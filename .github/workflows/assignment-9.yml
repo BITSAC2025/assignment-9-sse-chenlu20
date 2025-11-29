@@ -138,7 +138,7 @@ jobs:
 
       - name: Push Grading Summary to Student Repo
         run: |
-          RESULTS_DIR="$ASSIGNMENT_DIR/Assignment-5-Andersen/test-results"
+          RESULTS_DIR="$ASSIGNMENT_DIR/Assignment-8-SSE/test-results"
           SUMMARY_FILE="grading_summary.txt"
           
           cp "$RESULTS_DIR/summary.txt" "$ASSIGNMENT_DIR/$SUMMARY_FILE"

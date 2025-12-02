@@ -71,34 +71,92 @@ using namespace z3;
 //     }
 //     visited.erase(curPair);
 // }
+// void SSE::reachability(const ICFGEdge* curEdge, const ICFGNode* snk) {
+//     const ICFGNode* curNode = curEdge->getDstNode();
+    
+//     // 空指针检查
+//     if (!curNode) {
+//         return;
+//     }
+    
+//     // ⭐ 关键修改：先加边到path（在检查是否到达sink之前）
+//     bool isStartEdge = (curEdge->getSrcNode() == nullptr);
+//     if (!isStartEdge) {
+//         path.push_back(curEdge);
+//     }
+    
+//     // 到达目标节点
+//     if (curNode == snk) {
+//         collectAndTranslatePath();
+//         // 回溯
+//         if (!isStartEdge) {
+//             path.pop_back();
+//         }
+//         return;
+//     }
+    
+//     // 构造上下文敏感的visited状态
+//     ICFGEdgeStackPair curPair(curEdge, callstack);
+    
+//     // 避免重复访问
+//     if (visited.count(curPair)) {
+//         if (!isStartEdge) {
+//             path.pop_back();
+//         }
+//         return;
+//     }
+    
+//     // 标记为已访问
+//     visited.insert(curPair);
+    
+//     // 遍历所有出边
+//     for (const ICFGEdge* outEdge : curNode->getOutEdges()) {
+//         if (const CallCFGEdge* callEdge = SVFUtil::dyn_cast<CallCFGEdge>(outEdge)) {
+//             // 函数调用：压入调用栈
+//             callstack.push_back(curNode);
+//             reachability(outEdge, snk);
+//             callstack.pop_back();
+//         }
+//         else if (const RetCFGEdge* retEdge = SVFUtil::dyn_cast<RetCFGEdge>(outEdge)) {
+//             // 函数返回：检查调用栈匹配（上下文敏感）
+//             if (!callstack.empty()) {
+//                 reachability(outEdge, snk);
+//             }
+//         }
+//         else {
+//             // 普通过程内边
+//             reachability(outEdge, snk);
+//         }
+//     }
+    
+//     // 回溯
+//     if (!isStartEdge) {
+//         path.pop_back();
+//     }
+//     visited.erase(curPair);
+// }
 void SSE::reachability(const ICFGEdge* curEdge, const ICFGNode* snk) {
     const ICFGNode* curNode = curEdge->getDstNode();
     
-    // 空指针检查
     if (!curNode) {
         return;
     }
     
-    // ⭐ 关键修改：先加边到path（在检查是否到达sink之前）
     bool isStartEdge = (curEdge->getSrcNode() == nullptr);
     if (!isStartEdge) {
         path.push_back(curEdge);
     }
     
-    // 到达目标节点
     if (curNode == snk) {
         collectAndTranslatePath();
-        // 回溯
         if (!isStartEdge) {
             path.pop_back();
         }
         return;
     }
     
-    // 构造上下文敏感的visited状态
     ICFGEdgeStackPair curPair(curEdge, callstack);
     
-    // 避免重复访问
     if (visited.count(curPair)) {
         if (!isStartEdge) {
             path.pop_back();
@@ -106,30 +164,25 @@ void SSE::reachability(const ICFGEdge* curEdge, const ICFGNode* snk) {
         return;
     }
     
-    // 标记为已访问
     visited.insert(curPair);
     
-    // 遍历所有出边
     for (const ICFGEdge* outEdge : curNode->getOutEdges()) {
         if (const CallCFGEdge* callEdge = SVFUtil::dyn_cast<CallCFGEdge>(outEdge)) {
-            // 函数调用：压入调用栈
             callstack.push_back(curNode);
             reachability(outEdge, snk);
             callstack.pop_back();
         }
         else if (const RetCFGEdge* retEdge = SVFUtil::dyn_cast<RetCFGEdge>(outEdge)) {
-            // 函数返回：检查调用栈匹配（上下文敏感）
-            if (!callstack.empty()) {
+            // ⭐ 修改：检查调用栈匹配（上下文敏感的关键！）
+            if (!callstack.empty() && callstack.back() == retEdge->getCallSite()) {
                 reachability(outEdge, snk);
             }
         }
         else {
-            // 普通过程内边
             reachability(outEdge, snk);
         }
     }
     
-    // 回溯
     if (!isStartEdge) {
         path.pop_back();
     }

@@ -239,6 +239,29 @@ void SSE::handleRet(const RetCFGEdge* retEdge) {
 
 /// TODO: Implement handling of branch statements inside a function
 /// Return true if the path is feasible, false otherwise.
+// bool SSE::handleBranch(const IntraCFGEdge* edge) {
+//     // 获取分支条件变量
+//     const SVFValue* condition = edge->getCondition();
+//     if (condition == nullptr) {
+//         return true; // 不是条件分支
+//     }
+    
+//     // 获取条件的Z3表达式
+//     expr condExpr = getZ3Expr(condition->getId());
+    
+//     // 获取分支方向 (1=true分支, 0=false分支)
+//     s64_t branchValue = edge->getSuccessorCondValue();
+    
+//     // 添加路径约束
+//     addToSolver(condExpr == getCtx().int_val(branchValue));
+    
+//     // 检查路径可行性
+//     if (getSolver().check() == z3::unsat) {
+//         return false; // 路径不可行
+//     }
+    
+//     return true;
+// }
 bool SSE::handleBranch(const IntraCFGEdge* edge) {
     // 获取分支条件变量
     const SVFValue* condition = edge->getCondition();
@@ -252,8 +275,8 @@ bool SSE::handleBranch(const IntraCFGEdge* edge) {
     // 获取分支方向 (1=true分支, 0=false分支)
     s64_t branchValue = edge->getSuccessorCondValue();
     
-    // 添加路径约束
-    addToSolver(condExpr == getCtx().int_val(branchValue));
+    // ⭐ 关键修改：显式转换为int类型
+    addToSolver(condExpr == getCtx().int_val(static_cast<int>(branchValue)));
     
     // 检查路径可行性
     if (getSolver().check() == z3::unsat) {
@@ -262,7 +285,6 @@ bool SSE::handleBranch(const IntraCFGEdge* edge) {
     
     return true;
 }
-
 /// TODO: Translate AddrStmt, CopyStmt, LoadStmt, StoreStmt, GepStmt and CmpStmt
 bool SSE::handleNonBranch(const IntraCFGEdge* edge) {
     const ICFGNode* dstNode = edge->getDstNode();

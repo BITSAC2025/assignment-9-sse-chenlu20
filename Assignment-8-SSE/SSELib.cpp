@@ -522,10 +522,7 @@
 //     }
 // }
 
-
-   
-    
-    /**
+/**
  * SSELib.cpp
  * @author kisslune 
  */
@@ -610,51 +607,43 @@ void SSE::collectAndTranslatePath() {
     resetSolver();
 }
 
-/// 处理函数调用
+/// 处理函数调用 - 完全按照同学的写法
 void SSE::handleCall(const CallCFGEdge* callEdge) {
-    const ICFGNode* callSite = callEdge->getSrcNode();
+    const ICFGNode* callNode = callEdge->getSrcNode();
     
-    // 处理参数传递
-    for (const SVFStmt* stmt : callEdge->getCallPEs()) {
-        if (const CopyStmt* copyStmt = SVFUtil::dyn_cast<CopyStmt>(stmt)) {
-            // 获取实参值（caller上下文）
-            expr argVal = getZ3Expr(copyStmt->getRHSVarID());
-            
-            // 临时进入callee上下文获取形参
-            pushCallingCtx(const_cast<ICFGNode*>(callSite));
-            expr paramVar = getZ3Expr(copyStmt->getLHSVarID());
-            popCallingCtx();
-            
-            // 建立约束
-            addToSolver(paramVar == argVal);
-        }
+    // 用 CallPE* 直接迭代，不需要cast
+    for (const CallPE* pe : callEdge->getCallPEs()) {
+        // 获取实参（caller上下文）
+        expr rhs = getZ3Expr(pe->getRHSVarID());
+        
+        // 临时进入callee上下文获取形参
+        pushCallingCtx(callNode);
+        expr lhs = getZ3Expr(pe->getLHSVarID());
+        popCallingCtx();
+        
+        // 建立约束
+        addToSolver(lhs == rhs);
     }
     
     // 进入被调用函数上下文
-    pushCallingCtx(const_cast<ICFGNode*>(callSite));
+    pushCallingCtx(callNode);
 }
 
-/// 处理函数返回
+/// 处理函数返回 - 完全按照同学的写法
 void SSE::handleRet(const RetCFGEdge* retEdge) {
-    // 先在callee上下文获取返回值
-    expr retVal(getCtx());
-    const SVFStmt* retStmt = retEdge->getRetPE();
-    
-    if (retStmt) {
-        if (const CopyStmt* copyStmt = SVFUtil::dyn_cast<CopyStmt>(retStmt)) {
-            retVal = getZ3Expr(copyStmt->getRHSVarID());
-        }
+    // 用 RetPE* 直接获取
+    expr rhs(getCtx());
+    if (const RetPE* pe = retEdge->getRetPE()) {
+        rhs = getZ3Expr(pe->getRHSVarID());
     }
     
     // 退出callee上下文
     popCallingCtx();
     
     // 在caller上下文建立返回值约束
-    if (retStmt) {
-        if (const CopyStmt* copyStmt = SVFUtil::dyn_cast<CopyStmt>(retStmt)) {
-            expr recvVar = getZ3Expr(copyStmt->getLHSVarID());
-            addToSolver(recvVar == retVal);
-        }
+    if (const RetPE* pe = retEdge->getRetPE()) {
+        expr lhs = getZ3Expr(pe->getLHSVarID());
+        addToSolver(lhs == rhs);
     }
 }
 
@@ -866,3 +855,5 @@ void SSE::analyse() {
         }
     }
 }
+   
+   

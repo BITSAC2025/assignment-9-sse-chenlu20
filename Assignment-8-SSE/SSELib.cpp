@@ -607,7 +607,7 @@ void SSE::collectAndTranslatePath() {
     resetSolver();
 }
 
-/// 处理函数调用 - 完全按照同学的写法
+
 void SSE::handleCall(const CallCFGEdge* callEdge) {
     const ICFGNode* callNode = callEdge->getSrcNode();
     
@@ -629,7 +629,7 @@ void SSE::handleCall(const CallCFGEdge* callEdge) {
     pushCallingCtx(callNode);
 }
 
-/// 处理函数返回 - 完全按照同学的写法
+/// 处理函数返回 
 void SSE::handleRet(const RetCFGEdge* retEdge) {
     // 用 RetPE* 直接获取
     expr rhs(getCtx());
